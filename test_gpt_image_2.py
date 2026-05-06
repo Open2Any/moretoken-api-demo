@@ -13,14 +13,44 @@ MODEL = "gpt-image-2"
 PROMPT = "给我一张复古图片"
 SIZE = "1024x1024"
 OUTPUT_FILE = "output.png"
+RESPONSE_JSON_FILE = "output_gpt_image_2_response.json"
+REQUEST_TIMEOUT_SECONDS = 1200
+DOWNLOAD_TIMEOUT_SECONDS = 900
 # --------------------------
 
 import base64
 import json
 import sys
+import threading
+import time
 from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
+
+try:
+    sys.stdout.reconfigure(line_buffering=True)
+except AttributeError:
+    pass
+
+
+def elapsed(started: float) -> str:
+    return f"{time.monotonic() - started:.2f}s"
+
+
+def log(message: str) -> None:
+    print(message, flush=True)
+
+
+def start_heartbeat(label: str, started: float, interval: int = 15) -> threading.Event:
+    stop = threading.Event()
+
+    def run() -> None:
+        while not stop.wait(interval):
+            log(f"... still waiting for {label} after {elapsed(started)}")
+
+    thread = threading.Thread(target=run, daemon=True)
+    thread.start()
+    return stop
 
 
 def main() -> int:
@@ -35,47 +65,84 @@ def main() -> int:
     if API_KEY:
         headers["Authorization"] = f"Bearer {API_KEY}"
 
-    print(f"POST {url}")
-    print(f"  model={MODEL}  size={SIZE}")
-    print(f"  prompt={PROMPT!r}")
+    log(f"POST {url}")
+    log(f"  model={MODEL}  size={SIZE}")
+    log(f"  prompt={PROMPT!r}")
+    log(f"  request_timeout={REQUEST_TIMEOUT_SECONDS}s")
 
     req = Request(url, data=json.dumps(payload).encode(), headers=headers, method="POST")
+    started = time.monotonic()
+    heartbeat = start_heartbeat("generation response", started)
     try:
-        with urlopen(req, timeout=600) as resp:
+        with urlopen(req, timeout=REQUEST_TIMEOUT_SECONDS) as resp:
+            log(f"\nresponse headers received after {elapsed(started)}")
             body = resp.read().decode()
             status = resp.status
     except HTTPError as e:
-        print(f"\nHTTP {e.code} {e.reason}")
-        print(e.read().decode(errors="replace"))
+        heartbeat.set()
+        log(f"\nHTTP {e.code} {e.reason} after {elapsed(started)}")
+        log(e.read().decode(errors="replace"))
         return 1
     except URLError as e:
-        print(f"\nConnection failed: {e.reason}")
+        heartbeat.set()
+        log(f"\nConnection failed after {elapsed(started)}: {e.reason}")
         return 1
+    except TimeoutError as e:
+        heartbeat.set()
+        log(f"\nGeneration request timed out after {elapsed(started)}: {e}")
+        return 1
+    finally:
+        heartbeat.set()
 
-    print(f"\nHTTP {status}")
+    log(f"\nHTTP {status} after {elapsed(started)}")
+    response_json = Path(__file__).resolve().with_name(RESPONSE_JSON_FILE)
+    response_json.write_text(body, encoding="utf-8")
+    log(f"response json -> {response_json}")
+
     data = json.loads(body)
 
     if "data" not in data or not data["data"]:
-        print(json.dumps(data, indent=2, ensure_ascii=False))
+        log(json.dumps(data, indent=2, ensure_ascii=False))
         return 1
 
     item = data["data"][0]
-    out = Path(OUTPUT_FILE)
+    out = Path(__file__).resolve().with_name(OUTPUT_FILE)
 
     if "b64_json" in item:
         out.write_bytes(base64.b64decode(item["b64_json"]))
-        print(f"saved -> {out.resolve()}  ({out.stat().st_size} bytes)")
+        log(f"saved -> {out.resolve()}  ({out.stat().st_size} bytes)")
     elif "url" in item:
-        print(f"image url: {item['url']}")
-        with urlopen(item["url"], timeout=300) as r:
-            out.write_bytes(r.read())
-        print(f"saved -> {out.resolve()}  ({out.stat().st_size} bytes)")
+        log(f"image url: {item['url']}")
+        log(f"  download_timeout={DOWNLOAD_TIMEOUT_SECONDS}s")
+        download_started = time.monotonic()
+        heartbeat = start_heartbeat("image download", download_started)
+        try:
+            with urlopen(item["url"], timeout=DOWNLOAD_TIMEOUT_SECONDS) as r:
+                out.write_bytes(r.read())
+        except HTTPError as e:
+            heartbeat.set()
+            log(f"\nDownload failed: HTTP {e.code} {e.reason} after {elapsed(download_started)}")
+            log(f"generation response is saved at {response_json}")
+            return 1
+        except URLError as e:
+            heartbeat.set()
+            log(f"\nDownload failed after {elapsed(download_started)}: {e.reason}")
+            log(f"generation response is saved at {response_json}")
+            return 1
+        except TimeoutError as e:
+            heartbeat.set()
+            log(f"\nDownload timed out after {elapsed(download_started)}: {e}")
+            log(f"generation response is saved at {response_json}")
+            return 1
+        finally:
+            heartbeat.set()
+        log(f"saved -> {out.resolve()}  ({out.stat().st_size} bytes)")
     else:
-        print(json.dumps(data, indent=2, ensure_ascii=False))
+        log(json.dumps(data, indent=2, ensure_ascii=False))
         return 1
 
     if "usage" in data:
-        print(f"usage: {data['usage']}")
+        log(f"usage: {data['usage']}")
     return 0
 
 

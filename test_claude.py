@@ -9,7 +9,7 @@ native Anthropic /v1/messages shape instead, flip USE_ANTHROPIC_NATIVE = True.
 
 # ---- hardcoded config ----
 API_KEY = "API_KEY"
-BASE_URL = "http://10.10.101.205:8080"
+BASE_URL = "https://napi.moretoken.ai"
 MODEL = "claude-opus-4-7"
 PROMPT = "用一句话介绍你自己。"
 MAX_TOKENS = 256
