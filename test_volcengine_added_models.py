@@ -8,7 +8,7 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 
-API_KEY = os.getenv("API_KEY", os.getenv("MORETOKEN_API_KEY", ""))
+API_KEY = "API_KEY"
 BASE_URL = os.getenv("BASE_URL", "https://napi.moretoken.ai")
 TIMEOUT_SECONDS = int(os.getenv("TIMEOUT_SECONDS", "180"))
 IMAGE_SIZE = os.getenv("IMAGE_SIZE", "1920x1920")
