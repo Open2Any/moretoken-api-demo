@@ -12,7 +12,7 @@ SIZE = "1280x720"
 ASPECT_RATIO = "16:9"
 POLL_INTERVAL_SECONDS = 10
 TIMEOUT_SECONDS = 1200
-OUTPUT_FILE = "../assets/kling/output_kling_v3_video_generation.mp4"
+OUTPUT_FILE = "../assets/output/kling/output_kling_v3_video_generation.mp4"
 DOWNLOAD_RESULT = True
 # --------------------------
 

@@ -15,7 +15,7 @@ IMAGE_URL = "https://p9-arcosite.byteimg.com/tos-cn-i-goo7wpa0wc/666b1aa0e24143b
 SECONDS = 5
 POLL_INTERVAL = 10
 TIMEOUT = 900
-OUTPUT_FILE = "assets/output_v2v.mp4"
+OUTPUT_FILE = "assets/output/output_v2v.mp4"
 DOWNLOAD = True
 # -----------------
 
@@ -125,6 +125,7 @@ def poll(task_id: str) -> dict:
 def download(task_id: str) -> Path:
     url = f"{BASE_URL.rstrip('/')}/v1/videos/{task_id}/content"
     out = SCRIPT_DIR / OUTPUT_FILE
+    out.parent.mkdir(parents=True, exist_ok=True)
     log(f"\nGET {url}")
     req = Request(url, headers=headers(content_type=False), method="GET")
     with urlopen(req, timeout=1800) as resp:

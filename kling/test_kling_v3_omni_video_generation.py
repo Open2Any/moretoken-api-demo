@@ -12,12 +12,12 @@ BASE_URL = "https://www.moretoken.ai"
 MODEL_NAME = "kling-v3-omni"
 MODE = "pro"
 PROMPT = "基于参考图生成一段短视频：人物轻轻转头看向窗外，室内暖光流动，镜头缓慢推进，真实电影感。"
-IMAGE_FILE = "../assets/reference_real_person.jpg"
+IMAGE_FILE = "../assets/input/reference_real_person.jpg"
 DURATION = "5"
 SIZE = "1280x720"
 POLL_INTERVAL_SECONDS = 10
 TIMEOUT_SECONDS = 1200
-OUTPUT_FILE = "../assets/kling/output_kling_v3_omni_video_generation.mp4"
+OUTPUT_FILE = "../assets/output/kling/output_kling_v3_omni_video_generation.mp4"
 DOWNLOAD_RESULT = True
 # --------------------------
 

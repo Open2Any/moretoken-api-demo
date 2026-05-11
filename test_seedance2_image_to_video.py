@@ -6,11 +6,11 @@ API_KEY = "API_KEY"
 BASE_URL = "https://napi.moretoken.ai"
 MODEL = "doubao-seedance-2-0-260128"
 PROMPT = "镜头缓慢推进，画面中的人物微微转头望向窗外，暖金色光影流动，电影感氛围。"
-IMAGE_FILE = "assets/image.png"    # 参考图片路径（相对于脚本目录）
+IMAGE_FILE = "assets/input/image.png"    # 参考图片路径（相对于脚本目录）
 SECONDS = 5
 POLL_INTERVAL_SECONDS = 10
 TIMEOUT_SECONDS = 900
-OUTPUT_FILE = "assets/output_i2v.mp4"
+OUTPUT_FILE = "assets/output/output_i2v.mp4"
 DOWNLOAD_RESULT = True
 # --------------------------
 
@@ -185,6 +185,7 @@ def wait_until_done(task_id: str) -> dict:
 def download_video(task_id: str) -> Path:
     url = f"{BASE_URL.rstrip('/')}/v1/videos/{task_id}/content"
     out = SCRIPT_DIR / OUTPUT_FILE
+    out.parent.mkdir(parents=True, exist_ok=True)
 
     log(f"\nGET {url}")
     req = Request(url, headers=build_headers(content_type=False), method="GET")

@@ -12,8 +12,8 @@ BASE_URL = "https://napi.moretoken.ai"
 MODEL = "gpt-image-2"
 PROMPT = "给我一张复古图片"
 SIZE = "1024x1024"
-OUTPUT_FILE = "output.png"
-RESPONSE_JSON_FILE = "output_gpt_image_2_response.json"
+OUTPUT_FILE = "assets/output/output_gpt_image_2.png"
+RESPONSE_JSON_FILE = "assets/output/output_gpt_image_2_response.json"
 REQUEST_TIMEOUT_SECONDS = 1200
 DOWNLOAD_TIMEOUT_SECONDS = 900
 # --------------------------
@@ -31,6 +31,8 @@ try:
     sys.stdout.reconfigure(line_buffering=True)
 except AttributeError:
     pass
+
+SCRIPT_DIR = Path(__file__).resolve().parent
 
 
 def elapsed(started: float) -> str:
@@ -95,7 +97,8 @@ def main() -> int:
         heartbeat.set()
 
     log(f"\nHTTP {status} after {elapsed(started)}")
-    response_json = Path(__file__).resolve().with_name(RESPONSE_JSON_FILE)
+    response_json = SCRIPT_DIR / RESPONSE_JSON_FILE
+    response_json.parent.mkdir(parents=True, exist_ok=True)
     response_json.write_text(body, encoding="utf-8")
     log(f"response json -> {response_json}")
 
@@ -106,7 +109,8 @@ def main() -> int:
         return 1
 
     item = data["data"][0]
-    out = Path(__file__).resolve().with_name(OUTPUT_FILE)
+    out = SCRIPT_DIR / OUTPUT_FILE
+    out.parent.mkdir(parents=True, exist_ok=True)
 
     if "b64_json" in item:
         out.write_bytes(base64.b64decode(item["b64_json"]))
