@@ -1,21 +1,28 @@
 #!/usr/bin/env python3
-"""Test Qwen HappyHorse 1.0 video-edit with local video/image files via the moretoken gateway."""
+"""Test Qwen HappyHorse 1.0 video-edit with local or remote media via the moretoken gateway."""
 
 # ---- hardcoded config ----
-API_KEY = "API_KEY"
+API_KEY = "API_KEY"  # API 密钥；字符串
 BASE_URL = "https://napi.moretoken.ai"
 MODEL = "happyhorse-1.0-video-edit"
-PROMPT = "以输入视频的动作节奏和镜头运动为基础，参考图片中的女生形象，尽量保持人物身份、脸部特征、发型、白色衬衫和黑色背带一致，输出真实自拍视频质感的舞蹈短视频，人物稳定清晰，动作自然连贯。"
-VIDEO_SOURCE = "./blueprint-supreme-dance-tiktok_10s_540x720_15fps.mp4"
-REFERENCE_IMAGE_SOURCE = "./reference_real_person.jpg"
+PROMPT = """
+输入视频是主场景视频，背景必须锁定为输入视频原背景：左侧衣架横杆、衣架上的灰色衣服、墙面、地面、光线、阴影、空间布局、镜头构图和景深都必须保留在原位置，不要删除、弱化、重画、替换或简化任何背景物体。参考图片只用于替换舞者的人物身份和穿搭，参考图片优先级最高，必须严格保持参考图片中的女生身份、脸部特征、长卷发、耳饰、项链，以及服装造型：白色修身连衣短裙/白色衬衫质感上衣、黑色开衫外套或黑色背带元素、黑白配色和细节边线，不要换成输入视频人物的衣服。输入视频用于提取骨架动作、舞蹈节奏、身体姿态、手势轨迹、镜头运动和原始背景环境，但不参考输入视频的人物身份、脸、发型、服装、配饰或任何叠加层。输出真实自拍视频质感的舞蹈短视频，人物稳定清晰，动作自然连贯。
+
+注意：原视频每一帧左侧中部都有半透明动态水印和文字标识，尤其前 0-4 秒该水印最明显。请只移除左侧中部水印的白色半透明文字笔画和平台标识本身，不要把整个左侧区域当成遮挡物处理。水印后面的原视频背景必须原样保留：如果水印压在衣架、灰色衣服、墙面或人物衣服上，只淡化并清除文字笔画，水印之外的背景像素结构不要改动。不要删除左边背景物体，不要把衣架和灰色衣服抹掉，不要替换成空墙、纯色背景或新房间。不要学习、保留、迁移、复制或生成任何水印、半透明文字、平台 logo、字幕、边框、角标、贴纸、UI 控件或漂浮文字。
+
+禁止使用马赛克、像素块、模糊块、涂抹痕迹、遮挡贴片、半透明遮罩或色块来覆盖水印；不要出现任何块状压缩感、局部糊掉、局部方块化、文字残影或修补痕迹。不要对左侧背景做大面积修复、重绘、平滑或降噪，保持衣架和灰色衣服的原始纹理、褶皱、边缘和清晰度；只做文字笔画级别的清除。前 0-4 秒也必须保持左侧背景物体完整、清晰、自然，整段视频画面干净无文字无水印，同时保持原视频背景一致。音频必须保留输入视频的原始声音，不要替换音乐，不要重新配音。
+"""
+VIDEO_SOURCE = "http://network.jancsitech.net:9000/video/qwen/mmexport1778509537847.mp4"
+REFERENCE_IMAGE_SOURCE = "http://network.jancsitech.net:9000/video/qwen/444.webp"
 SIZE = "720p"
 SECONDS = 15
-WATERMARK = True
-SEED = None
+WATERMARK = False
+AUDIO_SETTING = "origin"
+SEED = 20260512
 POLL_INTERVAL_SECONDS = 10
 TIMEOUT_SECONDS = 1200
 OUTPUT_FILE = "../assets/output/qwen/output_qwen_happyhorse_1_0_video_edit_reference_video_generation_15s.mp4"
-DOWNLOAD_RESULT = True
+DOWNLOAD_RESULT = False
 # --------------------------
 
 import base64
@@ -66,6 +73,10 @@ def guess_mime_type(path: Path, fallback: str) -> str:
 
 def resolve_media_input(source: str, fallback_mime: str, label: str) -> tuple[str, str]:
     source = source.strip()
+    if source.startswith(("http://", "https://")):
+        log(f"Using remote {label}: {source}")
+        return source, source
+
     media_path = (SCRIPT_DIR / source).resolve()
     if not media_path.exists():
         raise FileNotFoundError(f"{label} not found: {media_path}")
@@ -97,6 +108,7 @@ def create_video() -> dict:
             ],
         },
         "parameters": {
+            "audio_setting": AUDIO_SETTING,
             "watermark": WATERMARK,
         },
     }
